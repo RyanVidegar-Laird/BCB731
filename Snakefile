@@ -1,7 +1,19 @@
 rule all:
-    input:
-	    'data/neoantigens.arrow',
-		'data/survival.arrow'
+    input: 'notebooks/overfit.html'
+
+rule render_hw01:
+	input:
+		neo = 'data/neoantigens.arrow',
+		surv = 'data/survival.arrow',
+		overfit_nb = 'notebooks/overfit.ipynb'
+
+	output:
+		'notebooks/overfit.html'
+
+	shell:
+		"""
+		quarto render notebooks/overfit.ipynb
+		"""
 
 rule preprocess:
 	input:

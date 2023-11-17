@@ -1,0 +1,1856 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.335">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Ryan Videgar-Laird">
+<meta name="dcterms.date" content="2023-11-16">
+
+<title>The [Dark] Art of Over-fitting</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="overfit_files/libs/clipboard/clipboard.min.js"></script>
+<script src="overfit_files/libs/quarto-html/quarto.js"></script>
+<script src="overfit_files/libs/quarto-html/popper.min.js"></script>
+<script src="overfit_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="overfit_files/libs/quarto-html/anchor.min.js"></script>
+<link href="overfit_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="overfit_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="overfit_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="overfit_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="overfit_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" integrity="sha512-c3Nl8+7g4LMSTdrm621y7kf9v3SDPnhxLNhcjFJbKECVnmZHTdo+IRO05sNLTH/D3vA6u1X32ehoLC7WFVdheg==" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">The [Dark] Art of Over-fitting</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Ryan Videgar-Laird </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">November 16, 2023</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="setup" class="level1">
+<h1>Setup</h1>
+<div class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> warnings</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> lifelines <span class="im">import</span> KaplanMeierFitter, CoxPHFitter</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> lifelines.statistics <span class="im">import</span> logrank_test</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.preprocessing <span class="im">import</span> MultiLabelBinarizer</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.decomposition <span class="im">import</span> PCA</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.model_selection <span class="im">import</span> (</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    cross_val_score,</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    cross_validate,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    StratifiedKFold,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    train_test_split,</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.ensemble <span class="im">import</span> RandomForestClassifier</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> umap</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> seaborn <span class="im">as</span> sns</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="2">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>PROJ_ROOT <span class="op">=</span> Path().resolve().parent</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="starting-data" class="level3">
+<h3 class="anchored" data-anchor-id="starting-data">Starting Data</h3>
+<div class="cell" data-execution_count="3">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>df_neoag <span class="op">=</span> pd.read_feather(PROJ_ROOT <span class="op">/</span> <span class="st">"data"</span> <span class="op">/</span> <span class="st">"neoantigens.arrow"</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>df_surv <span class="op">=</span> pd.read_feather(PROJ_ROOT <span class="op">/</span> <span class="st">"data"</span> <span class="op">/</span> <span class="st">"survival.arrow"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>I’ve already done some basic preprocessing (See <code>src/00-preprocess.py</code>). Time to try overfitting by doing everything wrong!</p>
+<p>First, here’s what the cleaned up data looks like. I’m making use of pandas <a href="https://pandas.pydata.org/pandas-docs/stable/user_guide/advanced.html"><code>MultiIndex</code></a> for the first time. Seems like it could prove quite nice and usefull.</p>
+<div class="cell" data-execution_count="4">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>df_neoag</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="68">
+
+<div>
+
+<table class="dataframe table table-sm table-striped">
+  <thead>
+    <tr>
+      <th></th>
+      <th></th>
+      <th>MUTATION_ID</th>
+      <th>WT.Peptide</th>
+      <th>MT.Peptide</th>
+      <th>MT.Allele</th>
+      <th>WT.Score</th>
+      <th>MT.Score</th>
+      <th>HLA</th>
+    </tr>
+    <tr>
+      <th>Dataset</th>
+      <th>Sample</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th rowspan="5" valign="top">VanAllen</th>
+      <th>Pat02</th>
+      <td>1_1563747_C_T_Pat02</td>
+      <td>NHREVAQIL</td>
+      <td>NYREVAQIL</td>
+      <td>C0702</td>
+      <td>701</td>
+      <td>70</td>
+      <td>A0201,A2601,B0801,B0702,C0702,C0702</td>
+    </tr>
+    <tr>
+      <th>Pat02</th>
+      <td>1_17087582_G_A_Pat02</td>
+      <td>SPSNDFQVL</td>
+      <td>SPLNDFQVL</td>
+      <td>B0801</td>
+      <td>739</td>
+      <td>202</td>
+      <td>A0201,A2601,B0801,B0702,C0702,C0702</td>
+    </tr>
+    <tr>
+      <th>Pat02</th>
+      <td>1_17087582_G_A_Pat02</td>
+      <td>SPSNDFQVL</td>
+      <td>SPLNDFQVL</td>
+      <td>B0702</td>
+      <td>32</td>
+      <td>37</td>
+      <td>A0201,A2601,B0801,B0702,C0702,C0702</td>
+    </tr>
+    <tr>
+      <th>Pat02</th>
+      <td>1_21806573_A_G_Pat02</td>
+      <td>LLDEKEPEV</td>
+      <td>LLDEKGPEV</td>
+      <td>A0201</td>
+      <td>8</td>
+      <td>9</td>
+      <td>A0201,A2601,B0801,B0702,C0702,C0702</td>
+    </tr>
+    <tr>
+      <th>Pat02</th>
+      <td>1_46073697_C_T_Pat02</td>
+      <td>KPGQEAPVL</td>
+      <td>KPGQEASVL</td>
+      <td>B0702</td>
+      <td>90</td>
+      <td>31</td>
+      <td>A0201,A2601,B0801,B0702,C0702,C0702</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th rowspan="5" valign="top">Rizvi</th>
+      <th>ZA6965</th>
+      <td>8_113697930_C_A_ZA6965</td>
+      <td>CLSNFTAPM</td>
+      <td>CLSNFTAPI</td>
+      <td>A3201</td>
+      <td>1850</td>
+      <td>71</td>
+      <td>A0201,A3201,A0289,B400102,B450101,C0602,C0304</td>
+    </tr>
+    <tr>
+      <th>ZA6965</th>
+      <td>X_68749680_T_A_ZA6965</td>
+      <td>RLCVLVLML</td>
+      <td>RLSVLVLML</td>
+      <td>A0201</td>
+      <td>419</td>
+      <td>172</td>
+      <td>A0201,A3201,A0289,B400102,B450101,C0602,C0304</td>
+    </tr>
+    <tr>
+      <th>ZA6965</th>
+      <td>X_68749680_T_A_ZA6965</td>
+      <td>RLCVLVLML</td>
+      <td>RLSVLVLML</td>
+      <td>A3201</td>
+      <td>516</td>
+      <td>314</td>
+      <td>A0201,A3201,A0289,B400102,B450101,C0602,C0304</td>
+    </tr>
+    <tr>
+      <th>ZA6965</th>
+      <td>X_68749680_T_A_ZA6965</td>
+      <td>SRIRLCVLV</td>
+      <td>SRIRLSVLV</td>
+      <td>C0602</td>
+      <td>751</td>
+      <td>146</td>
+      <td>A0201,A3201,A0289,B400102,B450101,C0602,C0304</td>
+    </tr>
+    <tr>
+      <th>ZA6965</th>
+      <td>X_68749680_T_A_ZA6965</td>
+      <td>IRLCVLVLM</td>
+      <td>IRLSVLVLM</td>
+      <td>C0602</td>
+      <td>2682</td>
+      <td>279</td>
+      <td>A0201,A3201,A0289,B400102,B450101,C0602,C0304</td>
+    </tr>
+  </tbody>
+</table>
+<p>70437 rows × 7 columns</p>
+</div>
+</div>
+</div>
+<div class="cell" data-execution_count="5">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>df_surv</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="69">
+
+<div>
+
+<table class="dataframe table table-sm table-striped">
+  <thead>
+    <tr>
+      <th></th>
+      <th></th>
+      <th>Months</th>
+      <th>Status</th>
+    </tr>
+    <tr>
+      <th>Dataset</th>
+      <th>Sample</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th rowspan="5" valign="top">VanAllen</th>
+      <th>Pat02</th>
+      <td>53.654736</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <th>Pat03</th>
+      <td>3.287668</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>Pat04</th>
+      <td>32.449280</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <th>Pat06</th>
+      <td>5.293145</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>Pat08</th>
+      <td>4.602735</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th rowspan="5" valign="top">Rizvi</th>
+      <th>GR0134</th>
+      <td>21.900000</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <th>VA1330</th>
+      <td>23.400000</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>NI9507</th>
+      <td>27.900000</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <th>AU5884</th>
+      <td>2.400000</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>VA7859</th>
+      <td>16.100000</td>
+      <td>False</td>
+    </tr>
+  </tbody>
+</table>
+<p>201 rows × 2 columns</p>
+</div>
+</div>
+</div>
+<p>Checking that all of the indices, {(dataset_name, sample_name)}, in the neoantigen dataset are also in the survival data (and vice versa):</p>
+<div class="cell" data-execution_count="6">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span>(df_neoag.index) <span class="op">-</span> <span class="bu">set</span>(df_surv.index)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="70">
+<pre><code>{('VanAllen', 'Pat07'),
+ ('VanAllen', 'Pat105'),
+ ('VanAllen', 'Pat57'),
+ ('VanAllen', 'Pat58'),
+ ('VanAllen', 'Pat63'),
+ ('VanAllen', 'Pat66'),
+ ('VanAllen', 'Pat77')}</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="7">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="bu">set</span>(df_surv.index) <span class="op">-</span> <span class="bu">set</span>(df_neoag.index)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="71">
+<pre><code>{('Rizvi', 'VA1330'), ('Rizvi', 'VA7859'), ('Snyder', 'NR8727')}</code></pre>
+</div>
+</div>
+<p>Hmmmm, seems some indexes aren’t lining up. Not going to look more into it now, but it might be within the scope of our assignment if these samples were selectively removed during the orig author’s QC. What’s the damage in terms of lost neoantigen records?</p>
+<div class="cell" data-execution_count="8">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>df_inmerge <span class="op">=</span> pd.merge(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    df_neoag, df_surv, left_index<span class="op">=</span><span class="va">True</span>, right_index<span class="op">=</span><span class="va">True</span>, validate<span class="op">=</span><span class="st">"m:1"</span>, how<span class="op">=</span><span class="st">"inner"</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Lost NeoAg records: </span><span class="sc">{</span><span class="bu">len</span>(df_neoag) <span class="op">-</span> <span class="bu">len</span>(df_inmerge)<span class="sc">}</span><span class="ss"> / </span><span class="sc">{</span><span class="bu">len</span>(df_neoag)<span class="sc">}</span><span class="ss">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Lost NeoAg records: 2709 / 70437</code></pre>
+</div>
+</div>
+<hr>
+<section id="survival-curves-by-dataset" class="level4">
+<h4 class="anchored" data-anchor-id="survival-curves-by-dataset">Survival Curves by Dataset</h4>
+<p>Moving on for now, let’s try a basic survival analysis per dataset.</p>
+<div class="cell" data-execution_count="9">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> plt.subplot(<span class="dv">111</span>)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>kmf <span class="op">=</span> KaplanMeierFitter()</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, grouped_df <span class="kw">in</span> df_surv.groupby(<span class="st">"Dataset"</span>):</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    kmf.fit(grouped_df[<span class="st">"Months"</span>], grouped_df[<span class="st">"Status"</span>], label<span class="op">=</span>name)</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    kmf.plot_survival_function(</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>        ax<span class="op">=</span>ax,</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="overfit_files/figure-html/cell-10-output-1.png" width="571" height="429"></p>
+</div>
+</div>
+<p>Quite a difference between the datasets… our goal is to overfit, this could be a good source of bias. - The Snyder paper had a different selection criteria than the other studies, which manifests here. They chose to only include good responders in their final dataset.</p>
+<hr>
+<p>But for now, I’ll keep all of the datasets lumped together. I want to try exploding the feature set, and then use non-linear dimension reduction to ‘find’ some structure. I’ll simply create a new column for each unique 9-mer observed, in addition to each HLA type. This will be very sparse. - See a small example of this feature transformation at: <code>./featurization_reprex.ipynb</code>.</p>
+</section>
+</section>
+<section id="featurization" class="level3">
+<h3 class="anchored" data-anchor-id="featurization">Featurization</h3>
+<div class="cell" data-execution_count="10">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># hla types have some typos in them, quick and dirty fix</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> parse_hla_str(hla_str):</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> [i <span class="cf">for</span> i <span class="kw">in</span> <span class="st">""</span>.join(hla_str.split()).split(<span class="st">","</span>) <span class="cf">if</span> <span class="bu">len</span>(i) <span class="op">&gt;</span> <span class="dv">0</span>]</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a><span class="co"># a mess</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>parse_hla_str(<span class="st">",  a,,b  b, cd ,   ,"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="74">
+<pre><code>['a', 'bb', 'cd']</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="11">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>hla <span class="op">=</span> df_inmerge[[<span class="st">"HLA"</span>]].drop_duplicates()</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>hla[<span class="st">"HLA"</span>] <span class="op">=</span> hla[<span class="st">"HLA"</span>].<span class="bu">map</span>(parse_hla_str)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>hla_idx <span class="op">=</span> hla.index</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>mlb <span class="op">=</span> MultiLabelBinarizer(sparse_output<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>hla <span class="op">=</span> mlb.fit_transform(hla.HLA)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>hla_labs <span class="op">=</span> [<span class="st">"hla_"</span> <span class="op">+</span> i <span class="cf">for</span> i <span class="kw">in</span> mlb.classes_]</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="co"># putting into sparse dataframe for easier index-based rejoining</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>hla <span class="op">=</span> pd.DataFrame.sparse.from_spmatrix(hla, index<span class="op">=</span>hla_idx, columns<span class="op">=</span>hla_labs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="12">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>pep <span class="op">=</span> (</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>    df_inmerge[[<span class="st">"MT.Peptide"</span>]]</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>    .groupby([<span class="st">"Dataset"</span>, <span class="st">"Sample"</span>])</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    .agg({<span class="st">"MT.Peptide"</span>: <span class="kw">lambda</span> x: <span class="bu">list</span>(x)})</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>pep_idx <span class="op">=</span> pep.index</span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>mlb <span class="op">=</span> MultiLabelBinarizer(sparse_output<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>pep <span class="op">=</span> mlb.fit_transform(pep[<span class="st">"MT.Peptide"</span>])</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>pep_labs <span class="op">=</span> [<span class="st">"mtpep_"</span> <span class="op">+</span> i <span class="cf">for</span> i <span class="kw">in</span> mlb.classes_]</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>pep <span class="op">=</span> pd.DataFrame.sparse.from_spmatrix(pep, index<span class="op">=</span>pep_idx, columns<span class="op">=</span>pep_labs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="13">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>df_sparse_hp <span class="op">=</span> hla.join(pep)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="kw">del</span> (pep, hla)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>df_sparse_hp</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="77">
+
+<div>
+
+<table class="dataframe table table-sm table-striped">
+  <thead>
+    <tr>
+      <th></th>
+      <th></th>
+      <th>hla_A</th>
+      <th>hla_A0101</th>
+      <th>hla_A0104</th>
+      <th>hla_A0201</th>
+      <th>hla_A0204</th>
+      <th>hla_A0206</th>
+      <th>hla_A0214</th>
+      <th>hla_A0289</th>
+      <th>hla_A0301</th>
+      <th>hla_A0321</th>
+      <th>...</th>
+      <th>mtpep_YYYFLRPLL</th>
+      <th>mtpep_YYYIKLKDL</th>
+      <th>mtpep_YYYLNTPRV</th>
+      <th>mtpep_YYYPYTYST</th>
+      <th>mtpep_YYYQGNWCV</th>
+      <th>mtpep_YYYQSRGRL</th>
+      <th>mtpep_YYYRHTRSI</th>
+      <th>mtpep_YYYSNTPRV</th>
+      <th>mtpep_YYYTGPKTL</th>
+      <th>mtpep_YYYYLNTPR</th>
+    </tr>
+    <tr>
+      <th>Dataset</th>
+      <th>Sample</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th rowspan="5" valign="top">Rizvi</th>
+      <th>AL4602</th>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>AU5884</th>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>BL3403</th>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>CA9903</th>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>CU9061</th>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th rowspan="5" valign="top">VanAllen</th>
+      <th>Pat86</th>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>Pat88</th>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>Pat90</th>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>Pat92</th>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>Pat98</th>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>...</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+<p>195 rows × 60141 columns</p>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="goal-strategy" class="level1">
+<h1>Goal / Strategy</h1>
+<p>That’s a sparse feature space alright. I’m now setup for my general goal: combine leakage (from pre-processing) and poor technique to generate noise with just enough signal to overfit on. Hopefully this represents the type of analysis where one slowly goes down the rabbit hole, trying and combining many methods without fully understanding underlying assumptions of limitations. That, plus a little leakage, could lead to falsely optimistic model evaluation that is obfuscated by lots of complex steps chained together.</p>
+<p>I’ve also kept my code well organized. Anyone who uses Make/Snakemake in an analysis probably knows what they’re doing, right? It looks robust and therefore is robust!</p>
+<p>I’ll start with dimensionality reduction. I’ll follow the ‘typical’ UMAP pipeline from <a href="https://umap-learn.readthedocs.io/en/latest/faq.html">its FAQ</a>: &gt; [start with a] high-dimensional embedding (300+) =&gt; PCA to reduce to 50 dimensions =&gt; UMAP to reduce to 10-20 dimensions =&gt; HDBSCAN for clustering / some plain algorithm for classification</p>
+<p>PCA probably isn’t the best option for binary data, whatever… probs fine ¯_(ツ)_/¯</p>
+<p>I still need to decide how I’ll actually classify samples. A bad (and therefore good) approach might be: 1. Use <code>lifelines</code> to fit a survival regression on the un-split, reduced dim, data. 2. Predict survival times for censored samples 3. Define a cutoff of “good prognosis” as survival times above some upper percentile 4. Train an overly complex model to predict the resulting binary prognosis</p>
+<hr>
+<section id="pca-umap" class="level2">
+<h2 class="anchored" data-anchor-id="pca-umap">PCA + UMAP</h2>
+<div class="cell" data-execution_count="14">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>seed <span class="op">=</span> <span class="dv">123654</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>pca <span class="op">=</span> PCA(n_components<span class="op">=</span><span class="dv">50</span>, random_state<span class="op">=</span>seed)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> pca.fit_transform(df_sparse_hp.sparse.to_dense())</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>reducer <span class="op">=</span> umap.UMAP(n_components<span class="op">=</span><span class="dv">2</span>, random_state<span class="op">=</span>seed)</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> warnings.catch_warnings():</span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    warnings.simplefilter(action<span class="op">=</span><span class="st">"ignore"</span>, category<span class="op">=</span><span class="pp">UserWarning</span>)</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ignore random state parallelism warning</span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    reducer.fit(X)</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>emb_2d <span class="op">=</span> reducer.transform(X)</span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>plt.scatter(emb_2d[:, <span class="dv">0</span>], emb_2d[:, <span class="dv">1</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="78">
+<pre><code>&lt;matplotlib.collections.PathCollection at 0x7f8e728bac10&gt;</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<p><img src="overfit_files/figure-html/cell-15-output-2.png" width="558" height="411"></p>
+</div>
+</div>
+<p>Wow, pretty. Looks like a dogwood flower.</p>
+<p><img src="https://upload.wikimedia.org/wikipedia/commons/7/71/Blooming_Dogwood.jpg" class="img-fluid" alt="Wikipedia, Dogwood"> Time for survival regression on a slightly larger embedding.</p>
+<div class="cell" data-execution_count="15">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>reducer <span class="op">=</span> umap.UMAP(n_components<span class="op">=</span><span class="dv">15</span>, random_state<span class="op">=</span>seed)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> warnings.catch_warnings():</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    warnings.simplefilter(action<span class="op">=</span><span class="st">"ignore"</span>, category<span class="op">=</span><span class="pp">UserWarning</span>)</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># ignore random state parallelism warning</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>    reducer.fit(X)</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>emb <span class="op">=</span> reducer.transform(X)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="16">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>emb <span class="op">=</span> pd.DataFrame(emb, columns<span class="op">=</span>[<span class="st">"emb_"</span> <span class="op">+</span> <span class="bu">str</span>(i) <span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">15</span>)])</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>emb.index <span class="op">=</span> df_sparse_hp.index</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>emb <span class="op">=</span> emb.join(df_surv)</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>emb</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="80">
+
+<div>
+
+<table class="dataframe table table-sm table-striped">
+  <thead>
+    <tr>
+      <th></th>
+      <th></th>
+      <th>emb_0</th>
+      <th>emb_1</th>
+      <th>emb_2</th>
+      <th>emb_3</th>
+      <th>emb_4</th>
+      <th>emb_5</th>
+      <th>emb_6</th>
+      <th>emb_7</th>
+      <th>emb_8</th>
+      <th>emb_9</th>
+      <th>emb_10</th>
+      <th>emb_11</th>
+      <th>emb_12</th>
+      <th>emb_13</th>
+      <th>emb_14</th>
+      <th>Months</th>
+      <th>Status</th>
+    </tr>
+    <tr>
+      <th>Dataset</th>
+      <th>Sample</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th rowspan="5" valign="top">Rizvi</th>
+      <th>AL4602</th>
+      <td>8.696940</td>
+      <td>11.990170</td>
+      <td>0.422310</td>
+      <td>5.676660</td>
+      <td>1.730538</td>
+      <td>7.818952</td>
+      <td>6.427540</td>
+      <td>-0.394721</td>
+      <td>4.523087</td>
+      <td>0.513556</td>
+      <td>0.801915</td>
+      <td>7.228773</td>
+      <td>4.391820</td>
+      <td>4.124061</td>
+      <td>2.389610</td>
+      <td>25.600000</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <th>AU5884</th>
+      <td>8.752948</td>
+      <td>12.221260</td>
+      <td>0.473912</td>
+      <td>6.023926</td>
+      <td>1.606221</td>
+      <td>6.383737</td>
+      <td>7.280601</td>
+      <td>-0.566004</td>
+      <td>4.286410</td>
+      <td>0.384666</td>
+      <td>0.680064</td>
+      <td>7.436167</td>
+      <td>4.848963</td>
+      <td>4.543642</td>
+      <td>2.887088</td>
+      <td>2.400000</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>BL3403</th>
+      <td>9.147636</td>
+      <td>12.269960</td>
+      <td>1.013504</td>
+      <td>5.765378</td>
+      <td>0.930015</td>
+      <td>6.482364</td>
+      <td>7.538159</td>
+      <td>-0.831413</td>
+      <td>4.473774</td>
+      <td>0.490223</td>
+      <td>0.304591</td>
+      <td>7.705140</td>
+      <td>4.851251</td>
+      <td>4.020684</td>
+      <td>3.105686</td>
+      <td>13.400000</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>CA9903</th>
+      <td>9.291765</td>
+      <td>11.479907</td>
+      <td>0.754091</td>
+      <td>5.993539</td>
+      <td>1.738141</td>
+      <td>7.856709</td>
+      <td>6.444182</td>
+      <td>0.105935</td>
+      <td>4.283933</td>
+      <td>1.084071</td>
+      <td>0.725128</td>
+      <td>6.995952</td>
+      <td>4.229937</td>
+      <td>4.021850</td>
+      <td>2.296034</td>
+      <td>34.299999</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <th>CU9061</th>
+      <td>9.978414</td>
+      <td>11.595785</td>
+      <td>1.104702</td>
+      <td>6.006626</td>
+      <td>1.051059</td>
+      <td>6.573788</td>
+      <td>7.405111</td>
+      <td>-0.340879</td>
+      <td>3.802712</td>
+      <td>0.777255</td>
+      <td>0.701506</td>
+      <td>7.209377</td>
+      <td>4.547236</td>
+      <td>3.443910</td>
+      <td>2.755784</td>
+      <td>15.600000</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th rowspan="5" valign="top">VanAllen</th>
+      <th>Pat86</th>
+      <td>9.714375</td>
+      <td>11.590719</td>
+      <td>1.222511</td>
+      <td>5.510706</td>
+      <td>1.193158</td>
+      <td>6.025036</td>
+      <td>7.456265</td>
+      <td>-1.113912</td>
+      <td>4.262743</td>
+      <td>0.107270</td>
+      <td>0.516630</td>
+      <td>7.824129</td>
+      <td>4.611051</td>
+      <td>3.808496</td>
+      <td>2.713874</td>
+      <td>9.632866</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>Pat88</th>
+      <td>9.316399</td>
+      <td>11.742634</td>
+      <td>1.016974</td>
+      <td>5.539266</td>
+      <td>1.715220</td>
+      <td>6.095654</td>
+      <td>7.034050</td>
+      <td>-0.741824</td>
+      <td>4.312298</td>
+      <td>0.259437</td>
+      <td>1.131083</td>
+      <td>7.789999</td>
+      <td>4.442368</td>
+      <td>4.018101</td>
+      <td>2.503051</td>
+      <td>32.515034</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <th>Pat90</th>
+      <td>9.520435</td>
+      <td>11.297050</td>
+      <td>0.857334</td>
+      <td>5.837837</td>
+      <td>1.803043</td>
+      <td>6.680264</td>
+      <td>6.881317</td>
+      <td>-0.458146</td>
+      <td>4.089032</td>
+      <td>0.446105</td>
+      <td>0.878745</td>
+      <td>7.351237</td>
+      <td>4.319640</td>
+      <td>4.094122</td>
+      <td>2.312619</td>
+      <td>33.041061</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <th>Pat92</th>
+      <td>9.697490</td>
+      <td>11.941105</td>
+      <td>1.344234</td>
+      <td>5.327190</td>
+      <td>0.681422</td>
+      <td>6.216207</td>
+      <td>7.430692</td>
+      <td>-1.214920</td>
+      <td>4.330660</td>
+      <td>0.134567</td>
+      <td>0.496735</td>
+      <td>7.918049</td>
+      <td>4.690978</td>
+      <td>3.341409</td>
+      <td>2.785475</td>
+      <td>4.043831</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>Pat98</th>
+      <td>9.595166</td>
+      <td>10.845682</td>
+      <td>0.724423</td>
+      <td>6.057424</td>
+      <td>1.974941</td>
+      <td>8.719937</td>
+      <td>5.842069</td>
+      <td>0.547050</td>
+      <td>4.083318</td>
+      <td>1.388299</td>
+      <td>1.212203</td>
+      <td>6.688455</td>
+      <td>3.650345</td>
+      <td>3.539864</td>
+      <td>1.691715</td>
+      <td>4.602735</td>
+      <td>True</td>
+    </tr>
+  </tbody>
+</table>
+<p>195 rows × 17 columns</p>
+</div>
+</div>
+</div>
+</section>
+<section id="survial-regression" class="level2">
+<h2 class="anchored" data-anchor-id="survial-regression">Survial Regression</h2>
+<p>For the sake of predicting median survival time in censored subjects.</p>
+<div class="cell" data-execution_count="17">
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>cph <span class="op">=</span> CoxPHFitter()</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>cph.fit(emb, duration_col<span class="op">=</span><span class="st">"Months"</span>, event_col<span class="op">=</span><span class="st">"Status"</span>)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>cph.print_summary()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+
+<div>
+
+<table class="dataframe table table-sm table-striped">
+  <tbody>
+    <tr>
+      <th>model</th>
+      <td>lifelines.CoxPHFitter</td>
+    </tr>
+    <tr>
+      <th>duration col</th>
+      <td>'Months'</td>
+    </tr>
+    <tr>
+      <th>event col</th>
+      <td>'Status'</td>
+    </tr>
+    <tr>
+      <th>baseline estimation</th>
+      <td>breslow</td>
+    </tr>
+    <tr>
+      <th>number of observations</th>
+      <td>195</td>
+    </tr>
+    <tr>
+      <th>number of events observed</th>
+      <td>129</td>
+    </tr>
+    <tr>
+      <th>partial log-likelihood</th>
+      <td>-597.78</td>
+    </tr>
+    <tr>
+      <th>time fit was run</th>
+      <td>2023-11-17 02:02:01 UTC</td>
+    </tr>
+  </tbody>
+</table>
+</div><table class="dataframe table table-sm table-striped">
+  <thead>
+    <tr>
+      <th style="min-width: 12px;"></th>
+      <th style="min-width: 12px;">coef</th>
+      <th style="min-width: 12px;">exp(coef)</th>
+      <th style="min-width: 12px;">se(coef)</th>
+      <th style="min-width: 12px;">coef lower 95%</th>
+      <th style="min-width: 12px;">coef upper 95%</th>
+      <th style="min-width: 12px;">exp(coef) lower 95%</th>
+      <th style="min-width: 12px;">exp(coef) upper 95%</th>
+      <th style="min-width: 12px;">cmp to</th>
+      <th style="min-width: 12px;">z</th>
+      <th style="min-width: 12px;">p</th>
+      <th style="min-width: 12px;">-log2(p)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>emb_0</th>
+      <td>-0.92</td>
+      <td>0.40</td>
+      <td>3.09</td>
+      <td>-6.98</td>
+      <td>5.14</td>
+      <td>0.00</td>
+      <td>171.19</td>
+      <td>0.00</td>
+      <td>-0.30</td>
+      <td>0.77</td>
+      <td>0.38</td>
+    </tr>
+    <tr>
+      <th>emb_1</th>
+      <td>-3.80</td>
+      <td>0.02</td>
+      <td>3.34</td>
+      <td>-10.36</td>
+      <td>2.75</td>
+      <td>0.00</td>
+      <td>15.63</td>
+      <td>0.00</td>
+      <td>-1.14</td>
+      <td>0.26</td>
+      <td>1.97</td>
+    </tr>
+    <tr>
+      <th>emb_2</th>
+      <td>2.11</td>
+      <td>8.26</td>
+      <td>4.14</td>
+      <td>-6.01</td>
+      <td>10.23</td>
+      <td>0.00</td>
+      <td>27793.87</td>
+      <td>0.00</td>
+      <td>0.51</td>
+      <td>0.61</td>
+      <td>0.71</td>
+    </tr>
+    <tr>
+      <th>emb_3</th>
+      <td>4.10</td>
+      <td>60.53</td>
+      <td>6.79</td>
+      <td>-9.20</td>
+      <td>17.41</td>
+      <td>0.00</td>
+      <td>3.64e+07</td>
+      <td>0.00</td>
+      <td>0.60</td>
+      <td>0.55</td>
+      <td>0.87</td>
+    </tr>
+    <tr>
+      <th>emb_4</th>
+      <td>-5.13</td>
+      <td>0.01</td>
+      <td>4.37</td>
+      <td>-13.69</td>
+      <td>3.43</td>
+      <td>0.00</td>
+      <td>30.87</td>
+      <td>0.00</td>
+      <td>-1.17</td>
+      <td>0.24</td>
+      <td>2.06</td>
+    </tr>
+    <tr>
+      <th>emb_5</th>
+      <td>1.56</td>
+      <td>4.75</td>
+      <td>1.90</td>
+      <td>-2.16</td>
+      <td>5.27</td>
+      <td>0.12</td>
+      <td>195.39</td>
+      <td>0.00</td>
+      <td>0.82</td>
+      <td>0.41</td>
+      <td>1.28</td>
+    </tr>
+    <tr>
+      <th>emb_6</th>
+      <td>-2.47</td>
+      <td>0.08</td>
+      <td>5.14</td>
+      <td>-12.54</td>
+      <td>7.59</td>
+      <td>0.00</td>
+      <td>1987.65</td>
+      <td>0.00</td>
+      <td>-0.48</td>
+      <td>0.63</td>
+      <td>0.67</td>
+    </tr>
+    <tr>
+      <th>emb_7</th>
+      <td>1.12</td>
+      <td>3.07</td>
+      <td>4.60</td>
+      <td>-7.90</td>
+      <td>10.14</td>
+      <td>0.00</td>
+      <td>25398.30</td>
+      <td>0.00</td>
+      <td>0.24</td>
+      <td>0.81</td>
+      <td>0.31</td>
+    </tr>
+    <tr>
+      <th>emb_8</th>
+      <td>1.56</td>
+      <td>4.74</td>
+      <td>4.15</td>
+      <td>-6.58</td>
+      <td>9.69</td>
+      <td>0.00</td>
+      <td>16150.52</td>
+      <td>0.00</td>
+      <td>0.37</td>
+      <td>0.71</td>
+      <td>0.50</td>
+    </tr>
+    <tr>
+      <th>emb_9</th>
+      <td>-4.11</td>
+      <td>0.02</td>
+      <td>5.43</td>
+      <td>-14.75</td>
+      <td>6.53</td>
+      <td>0.00</td>
+      <td>687.12</td>
+      <td>0.00</td>
+      <td>-0.76</td>
+      <td>0.45</td>
+      <td>1.16</td>
+    </tr>
+    <tr>
+      <th>emb_10</th>
+      <td>5.08</td>
+      <td>161.25</td>
+      <td>3.67</td>
+      <td>-2.12</td>
+      <td>12.29</td>
+      <td>0.12</td>
+      <td>2.17e+05</td>
+      <td>0.00</td>
+      <td>1.38</td>
+      <td>0.17</td>
+      <td>2.59</td>
+    </tr>
+    <tr>
+      <th>emb_11</th>
+      <td>1.27</td>
+      <td>3.57</td>
+      <td>4.20</td>
+      <td>-6.96</td>
+      <td>9.50</td>
+      <td>0.00</td>
+      <td>13384.82</td>
+      <td>0.00</td>
+      <td>0.30</td>
+      <td>0.76</td>
+      <td>0.39</td>
+    </tr>
+    <tr>
+      <th>emb_12</th>
+      <td>4.67</td>
+      <td>107.04</td>
+      <td>4.07</td>
+      <td>-3.30</td>
+      <td>12.64</td>
+      <td>0.04</td>
+      <td>3.10e+05</td>
+      <td>0.00</td>
+      <td>1.15</td>
+      <td>0.25</td>
+      <td>2.00</td>
+    </tr>
+    <tr>
+      <th>emb_13</th>
+      <td>1.52</td>
+      <td>4.55</td>
+      <td>4.77</td>
+      <td>-7.83</td>
+      <td>10.86</td>
+      <td>0.00</td>
+      <td>52225.16</td>
+      <td>0.00</td>
+      <td>0.32</td>
+      <td>0.75</td>
+      <td>0.41</td>
+    </tr>
+    <tr>
+      <th>emb_14</th>
+      <td>2.00</td>
+      <td>7.40</td>
+      <td>5.60</td>
+      <td>-8.97</td>
+      <td>12.97</td>
+      <td>0.00</td>
+      <td>4.31e+05</td>
+      <td>0.00</td>
+      <td>0.36</td>
+      <td>0.72</td>
+      <td>0.47</td>
+    </tr>
+  </tbody>
+</table><br><div>
+
+<table class="dataframe table table-sm table-striped">
+  <tbody>
+    <tr>
+      <th>Concordance</th>
+      <td>0.58</td>
+    </tr>
+    <tr>
+      <th>Partial AIC</th>
+      <td>1225.56</td>
+    </tr>
+    <tr>
+      <th>log-likelihood ratio test</th>
+      <td>19.83 on 15 df</td>
+    </tr>
+    <tr>
+      <th>-log2(p) of ll-ratio test</th>
+      <td>2.48</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+<div class="cell" data-execution_count="18">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>cph.plot()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="82">
+<pre><code>&lt;Axes: xlabel='log(HR) (95% CI)'&gt;</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<p><img src="overfit_files/figure-html/cell-19-output-2.png" width="603" height="429"></p>
+</div>
+</div>
+<p>None of these look like very good predictors…</p>
+<hr>
+</section>
+<section id="new-survival-times" class="level2">
+<h2 class="anchored" data-anchor-id="new-survival-times">New Survival Times</h2>
+<p>Predict median life remaining for censored subjects:</p>
+<div class="cell" data-execution_count="19">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>censor_idx <span class="op">=</span> emb[<span class="op">~</span>emb.Status].index</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>censored_subjects <span class="op">=</span> emb.loc[censor_idx]</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>censored_subjects_last_obs <span class="op">=</span> censored_subjects[<span class="st">"Months"</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="20">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>med_life_remain <span class="op">=</span> cph.predict_median(censored_subjects, censored_subjects_last_obs)</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>new_eol <span class="op">=</span> emb.loc[censor_idx][<span class="st">"Months"</span>] <span class="op">+</span> med_life_remain</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>new_eol.name <span class="op">=</span> <span class="st">"Months"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Prediced end of life for censored subjects:</p>
+<div class="cell" data-execution_count="21">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>sns.histplot(new_eol)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="85">
+<pre><code>&lt;Axes: xlabel='Months', ylabel='Count'&gt;</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<p><img src="overfit_files/figure-html/cell-22-output-2.png" width="602" height="429"></p>
+</div>
+</div>
+<p>Every censored sample gets lots of extra life (good for them).</p>
+<p>Compare to observed deaths and time at censor:</p>
+<div class="cell" data-execution_count="22">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>sns.histplot(emb, x<span class="op">=</span><span class="st">"Months"</span>, hue<span class="op">=</span><span class="st">"Status"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="86">
+<pre><code>&lt;Axes: xlabel='Months', ylabel='Count'&gt;</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<p><img src="overfit_files/figure-html/cell-23-output-2.png" width="585" height="429"></p>
+</div>
+</div>
+<div class="cell" data-execution_count="23">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>pred_eol_emb <span class="op">=</span> emb.copy()</span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>pred_eol_emb.update(new_eol)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="24">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>sns.histplot(pred_eol_emb, x<span class="op">=</span><span class="st">"Months"</span>, hue<span class="op">=</span><span class="st">"Status"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="88">
+<pre><code>&lt;Axes: xlabel='Months', ylabel='Count'&gt;</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<p><img src="overfit_files/figure-html/cell-25-output-2.png" width="585" height="429"></p>
+</div>
+</div>
+<p>Annnnnd…. the dataset is now dramatically split by censored/uncensored subjects! Let’s move ahead and model it.</p>
+<p>I’d say a 5 year survival time is great! Let’s use that as the new binary cutoff for ‘poor’ vs ‘good’ prognosis, and train a predictive model.</p>
+</section>
+<section id="random-forest-classifier" class="level2">
+<h2 class="anchored" data-anchor-id="random-forest-classifier">Random Forest Classifier</h2>
+<div class="cell" data-execution_count="25">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> pred_eol_emb.Months <span class="op">&gt;=</span> <span class="dv">60</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> pred_eol_emb.drop([<span class="st">"Months"</span>, <span class="st">"Status"</span>], axis<span class="op">=</span><span class="dv">1</span>).values</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="26">
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>clf <span class="op">=</span> RandomForestClassifier(n_estimators<span class="op">=</span><span class="dv">200</span>, random_state<span class="op">=</span>seed)</span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>cv <span class="op">=</span> StratifiedKFold(n_splits<span class="op">=</span><span class="dv">10</span>)</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>scores <span class="op">=</span> cross_validate(</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>    clf, X, y, cv<span class="op">=</span>cv, scoring<span class="op">=</span>(<span class="st">"accuracy"</span>, <span class="st">"f1_micro"</span>), return_train_score<span class="op">=</span><span class="va">True</span></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>    <span class="ss">f"""Mean Test Accuracy: </span><span class="sc">{</span>scores[<span class="st">'test_accuracy'</span>]<span class="sc">.</span>mean()<span class="sc">}</span></span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a><span class="ss">Mean Test F1: </span><span class="sc">{</span>scores[<span class="st">'test_f1_micro'</span>]<span class="sc">.</span>mean()<span class="sc">}</span><span class="ss">"""</span></span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Mean Test Accuracy: 0.6265789473684211
+Mean Test F1: 0.6265789473684211</code></pre>
+</div>
+</div>
+<p>Honestly those mean cross-val test scores aren’t too shabby (don’t know why the accuracy and f1 are identical though..), considering we started off with such sparse and sketchy data. Imagine if one really could predict &gt;= 5 year survival time based solely on on HLA types and 9-mer peptide sequences…</p>
+<p>That indicates there was a decent bit of data leakage in the pre-processing. That or I’m simply not accounting for ‘batch’ effects of each dataset. Seems the survival regression is heavily favoring censored subjects… which is carrying through here.</p>
+<p>The feature space is certainly large and noisy enough to get great training accuracy:</p>
+<div class="cell" data-execution_count="27">
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>clf.fit(X, y)</span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>y_pred <span class="op">=</span> clf.predict(X)</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>df_pred_surv <span class="op">=</span> df_surv.loc[y.index]</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>df_pred_surv[<span class="st">"good_prognosis"</span>] <span class="op">=</span> y_pred</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>good_idx <span class="op">=</span> df_pred_surv.good_prognosis</span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> plt.subplot(<span class="dv">111</span>)</span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>kmf <span class="op">=</span> KaplanMeierFitter()</span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, grouped_df <span class="kw">in</span> df_pred_surv.groupby(<span class="st">"good_prognosis"</span>):</span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>    kmf.fit(grouped_df[<span class="st">"Months"</span>], grouped_df[<span class="st">"Status"</span>], label<span class="op">=</span>name)</span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>    kmf.plot_survival_function(</span>
+<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>        ax<span class="op">=</span>ax,</span>
+<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="overfit_files/figure-html/cell-28-output-1.png" width="571" height="429"></p>
+</div>
+</div>
+<div class="cell" data-execution_count="28">
+<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>logrank_test(</span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>    df_pred_surv.Months[good_idx],</span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>    df_pred_surv.Months[<span class="op">~</span>good_idx],</span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>    df_pred_surv.Status[good_idx],</span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>    df_pred_surv.Status[<span class="op">~</span>good_idx],</span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="92">
+
+<div>
+
+<table class="dataframe table table-sm table-striped">
+  <tbody>
+    <tr>
+      <th>t_0</th>
+      <td>-1</td>
+    </tr>
+    <tr>
+      <th>null_distribution</th>
+      <td>chi squared</td>
+    </tr>
+    <tr>
+      <th>degrees_of_freedom</th>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>test_name</th>
+      <td>logrank_test</td>
+    </tr>
+  </tbody>
+</table>
+</div><table class="dataframe table table-sm table-striped">
+  <thead>
+    <tr>
+      <th></th>
+      <th>test_statistic</th>
+      <th>p</th>
+      <th>-log2(p)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>162.20</td>
+      <td>&lt;0.005</td>
+      <td>121.01</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+</div>
+<p>We did it!!! Problem solved!</p>
+<hr>
+<p>It’ll fall apart with any sort of cross-validation. Here’s a simple manual bootstrap for lack of time.</p>
+<p>For each iter:</p>
+<ol type="1">
+<li><p>Split the dataset into train/test sets.</p></li>
+<li><p>Predict ‘good’ response using the random forest classifier</p></li>
+<li><p>Group test set into predicted good vs poor prognosis sets</p></li>
+<li><p>Get p-value by log-rank test</p></li>
+</ol>
+<div class="cell" data-execution_count="29">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>p_values <span class="op">=</span> []</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> i <span class="kw">in</span> <span class="bu">range</span>(<span class="dv">0</span>, <span class="dv">100</span>):</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>    (eol_train, eol_test) <span class="op">=</span> train_test_split(pred_eol_emb, test_size<span class="op">=</span><span class="fl">0.50</span>)</span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>    y_train <span class="op">=</span> eol_train.Months <span class="op">&gt;=</span> <span class="dv">60</span></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>    y_test <span class="op">=</span> eol_test.Months <span class="op">&gt;=</span> <span class="dv">60</span></span>
+<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a>    X_train <span class="op">=</span> eol_train.drop([<span class="st">"Months"</span>, <span class="st">"Status"</span>], axis<span class="op">=</span><span class="dv">1</span>).values</span>
+<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a>    X_test <span class="op">=</span> eol_test.drop([<span class="st">"Months"</span>, <span class="st">"Status"</span>], axis<span class="op">=</span><span class="dv">1</span>).values</span>
+<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a>    clf.fit(X_train, y_train)</span>
+<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a>    y_pred <span class="op">=</span> clf.predict(X_test)</span>
+<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a>    df_pred_surv <span class="op">=</span> df_surv.loc[y_test.index]</span>
+<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a>    df_pred_surv[<span class="st">"good_prognosis"</span>] <span class="op">=</span> y_pred</span>
+<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a>    good_idx <span class="op">=</span> df_pred_surv.good_prognosis</span>
+<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb39-20"><a href="#cb39-20" aria-hidden="true" tabindex="-1"></a>    p_values.append(</span>
+<span id="cb39-21"><a href="#cb39-21" aria-hidden="true" tabindex="-1"></a>        logrank_test(</span>
+<span id="cb39-22"><a href="#cb39-22" aria-hidden="true" tabindex="-1"></a>            df_pred_surv.Months[good_idx],</span>
+<span id="cb39-23"><a href="#cb39-23" aria-hidden="true" tabindex="-1"></a>            df_pred_surv.Months[<span class="op">~</span>good_idx],</span>
+<span id="cb39-24"><a href="#cb39-24" aria-hidden="true" tabindex="-1"></a>            df_pred_surv.Status[good_idx],</span>
+<span id="cb39-25"><a href="#cb39-25" aria-hidden="true" tabindex="-1"></a>            df_pred_surv.Status[<span class="op">~</span>good_idx],</span>
+<span id="cb39-26"><a href="#cb39-26" aria-hidden="true" tabindex="-1"></a>        ).p_value</span>
+<span id="cb39-27"><a href="#cb39-27" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-execution_count="30">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a>np.<span class="bu">min</span>(p_values)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="94">
+<pre><code>0.020419200115429605</code></pre>
+</div>
+</div>
+<div class="cell" data-execution_count="31">
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>sns.histplot(p_values)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display" data-execution_count="95">
+<pre><code>&lt;Axes: ylabel='Count'&gt;</code></pre>
+</div>
+<div class="cell-output cell-output-display">
+<p><img src="overfit_files/figure-html/cell-32-output-2.png" width="597" height="411"></p>
+</div>
+</div>
+<p>Suddenly things don’t look too great. Example curve from the test set predictions:</p>
+<div class="cell" data-execution_count="32">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>ax <span class="op">=</span> plt.subplot(<span class="dv">111</span>)</span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>kmf <span class="op">=</span> KaplanMeierFitter()</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> name, grouped_df <span class="kw">in</span> df_pred_surv.groupby(<span class="st">"good_prognosis"</span>):</span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>    kmf.fit(grouped_df[<span class="st">"Months"</span>], grouped_df[<span class="st">"Status"</span>], label<span class="op">=</span>name)</span>
+<span id="cb44-7"><a href="#cb44-7" aria-hidden="true" tabindex="-1"></a>    kmf.plot_survival_function(</span>
+<span id="cb44-8"><a href="#cb44-8" aria-hidden="true" tabindex="-1"></a>        ax<span class="op">=</span>ax,</span>
+<span id="cb44-9"><a href="#cb44-9" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-display">
+<p><img src="overfit_files/figure-html/cell-33-output-1.png" width="571" height="429"></p>
+</div>
+</div>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
